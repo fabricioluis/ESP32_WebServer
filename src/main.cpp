@@ -13,17 +13,12 @@ String defaultHTML();
 
 void handle();
 
-/*
-void contador();
-void teste();
-*/
-
 void printMemoria(const char *pMsg = NULL);
 
 void setup()
 {
   Serial.begin(115200);
-  delay(1000);
+  delay(500);
 
   // WiFi.mode(WIFI_STA);
   WiFi.begin(NET_SSID, NET_PASSWORD);
@@ -39,7 +34,7 @@ void setup()
   server.begin();
 
   Serial.printf("Server HTTP Ok.\n");
-  delay(1000);
+  delay(500);
 }
 
 void loop()
@@ -52,7 +47,6 @@ void handle()
   WiFiClient client = server.available();
 
   if (client) {
-    Serial.printf("III: %s\n\n", client.remoteIP().toString());
     delay(500);
 
     String queryString = "";
@@ -64,7 +58,6 @@ void handle()
     while (client.connected()) {
       c = client.read();
       queryString += c;
-      // Serial.write(c);
 
       // informa a posicao da string " HTTP/1.1".
       posHTTP = queryString.indexOf(" HTTP/1.1");
@@ -75,33 +68,17 @@ void handle()
 
         Serial.printf("\nqueryString:%s\n", queryString.c_str());
 
+        // Imprime pagina defaultHTML.
         client.println(defaultHTML().c_str());
         break;
       }
-
-      /*
-            if (c == '\n') {
-              // se for final de transmissao HTML vem com \n.
-              if (currentLine.length() == 0) {
-                client.println(defaultHTML().c_str());
-                break;
-              }
-              else {
-                currentLine = "";
-              }  // if (currentLine.length() == 0) {
-            }
-            else if (c != '\r') {
-              currentLine += c;
-            }  // if (c == '\n') {
-      */
     }
 
     client.stop();
-    Serial.println("FFF - Cliente desconectado.");
 
     printMemoria();
-  }
-}  // if (client) {
+  }  // if (client) {
+}
 
 String defaultHTML()
 {
@@ -114,6 +91,18 @@ String defaultHTML()
   // Desenho (/desenhoSet?nr=1)
   response += " <form action='/desenhoSet'>";
   response += "Desenho:<input type='text' name='nr' size='2' value='1'>";
+  response += "<input type='submit' value='ok'></form>\n";
+
+  // LED Intensidade (/ledSetIntensidade?nr=100)
+  response += " <form action='/ledSetIntensidade'>";
+  response += "LED Intensidade:<input type='text' name='nr' size='3' value='50'>";
+  response += "<input type='submit' value='ok'></form>\n";
+
+  // LED Cor (/ledSetRGB?nr=100)
+  response += " <form action='/ledSetRGB'>";
+  response += "R:<input type='text' name='R' size='3' value='127'>";
+  response += "G:<input type='text' name='G' size='3' value='128'>";
+  response += "B:<input type='text' name='B' size='3' value='129'>";
   response += "<input type='submit' value='ok'></form>\n";
 
   response += "<a href='/'>Inicio</a><br>\n";
@@ -137,36 +126,3 @@ void printMemoria(const char *pMsg)
   // system_show_malloc();
   memRAM_anterior = memRAM;
 }
-
-/*
-void contador()
-{
-  String response = "Contador: ";
-  response += ct++;
-  server.send(200, "text/plain", response);
-
-  // printMemoria();
-}
-
-// Função para lidar com a rota "/teste"
-void teste()
-{
-  // Obter a query string
-  String queryString = server.uri();
-  int pos = queryString.indexOf('?');
-  if (pos > 0) {
-    queryString = queryString.substring(pos + 1);
-  }
-
-  // Extrair os parâmetros da query string
-  // (Exemplo: usando a biblioteca ArduinoJson para parsear)
-  // ...
-
-  String response = "queryString: /teste - acessada com a query string: " + queryString;
-  server.send(200, "text/html", response);
-  //  server.send(200, "text/plain", response);
-
-  // printMemoria();
-}
-
-*/

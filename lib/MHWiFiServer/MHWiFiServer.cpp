@@ -52,13 +52,13 @@ void MHWiFiServer::handle()
 
         // Faz o tratamento de acordo com o formulario escolhido.
         if (queryString.indexOf("frequenciaSet") > 0) {
-          Serial.println("Frequencia Set");
+          frequenciaSet(queryString);
         }
         else if (queryString.indexOf("desenhoSet") > 0) {
-          Serial.println("Desenho Set");
+          desenhoSet(queryString);
         }
         else if (queryString.indexOf("ledSetIntensidade") > 0) {
-          Serial.println("LED Intensidade Set");
+          ledSetIntensidade(queryString);
         }
         else if (queryString.indexOf("ledSetRGB") > 0) {
           Serial.println("LED RGB Set");
@@ -123,4 +123,28 @@ void MHWiFiServer::printMemoria(const char *pMsg)
   // system_print_meminfo();
   // system_show_malloc();
   memRAM_anterior = memRAM;
+}
+
+// trata o form /desenhoSet
+void MHWiFiServer::desenhoSet(String pQuery)
+{
+  int pos = pQuery.indexOf("/desenhoSet?nr=") + 15;
+  pQuery = pQuery.substring(pos, pQuery.length());
+  Serial.printf("(%s)\n", pQuery);
+}
+
+// trata o form /frequenciaSet
+void MHWiFiServer::frequenciaSet(String pQuery)
+{
+  int pos = pQuery.indexOf("/frequenciaSet?hertz=") + 21;
+  pQuery = pQuery.substring(pos, pQuery.length());
+  Serial.printf("(%s)\n", pQuery);
+}
+
+// trata o forma /ledSetIntensidade
+void MHWiFiServer::ledSetIntensidade(String pQuery)
+{
+  int pos = pQuery.indexOf("/ledSetIntensidade?nr=") + 22;
+  pQuery = pQuery.substring(pos, pQuery.length());
+  Serial.printf("(%s)\n", pQuery);
 }

@@ -12,6 +12,11 @@ class MHWiFiServer {
   uint32_t memRAM;
   String defaultHTML();
 
+  // forms HTML
+  void desenhoSet(String pQuery);
+  void frequenciaSet(String pQuery);
+  void ledSetIntensidade(String pQuery);
+
  public:
   MHWiFiServer();
 

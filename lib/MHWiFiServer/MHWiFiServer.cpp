@@ -4,7 +4,7 @@ WiFiServer server(80);
 
 MHWiFiServer::MHWiFiServer()
 {
-  memRAM = 0;
+  memRAM = memRAM_min = ESP.getFreeHeap();
 }
 
 void MHWiFiServer::conectaWifi()
@@ -39,6 +39,7 @@ void MHWiFiServer::handle()
 
     int posHTTP = 0;
 
+    int i = 0;
     while (client.connected()) {
       c = client.read();
       queryString += c;
@@ -47,31 +48,30 @@ void MHWiFiServer::handle()
       posHTTP = queryString.indexOf(" HTTP/1.1");
 
       if (posHTTP >= 0) {
+        Serial.printf("queryString:%s\n", queryString.c_str());
         int pos_barra = queryString.indexOf(" /") + 1;
         queryString = queryString.substring(pos_barra, posHTTP);
 
         // Faz o tratamento de acordo com o formulario escolhido.
         if (queryString.indexOf("frequenciaSet") > 0) {
-          frequenciaSet(queryString);
+          frequenciaSet(&queryString);
         }
         else if (queryString.indexOf("desenhoSet") > 0) {
-          desenhoSet(queryString);
+          desenhoSet(&queryString);
         }
-        else if (queryString.indexOf("ledSetIntensidade") > 0) {
-          ledSetIntensidade(queryString);
+        else if (queryString.indexOf("ledIntensidadeSet") > 0) {
+          ledIntensidadeSet(&queryString);
         }
-        else if (queryString.indexOf("ledSetRGB") > 0) {
-          Serial.println("LED RGB Set");
+        else if (queryString.indexOf("ledRGBSet") > 0) {
+          ledRGBSet(&queryString);
         }
 
-        Serial.printf("queryString:%s\n", queryString.c_str());
-
-        // Imprime pagina defaultHTML.
-        client.println(defaultHTML().c_str());
         break;
       }
     }
 
+    // Imprime pagina defaultHTML.
+    client.println(defaultHTML().c_str());
     client.stop();
 
     printMemoria();
@@ -80,9 +80,11 @@ void MHWiFiServer::handle()
 
 String MHWiFiServer::defaultHTML()
 {
-  String response = "<html><center><h3>ESP32 - Wifi - WebServer</h3></center><br>\n";
+  String response = "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>";
+  response += "<center><h3> ESP32 - Wifi - WebServer</ h3></center><br>\n ";
+
   // Frequencia (/frequenciaSet?hertz=1000)
-  response += " <form action='/frequenciaSet'>";
+  response += " <form action='/frequenciaSet' accept-charset='utf-8'>";
   response += "Frequencia:<input type='text' name='hertz' size='4' value='1000'>";
   response += "<input type='submit' value='ok'></form>\n";
 
@@ -92,15 +94,15 @@ String MHWiFiServer::defaultHTML()
   response += "<input type='submit' value='ok'></form>\n";
 
   // LED Intensidade (/ledSetIntensidade?nr=100)
-  response += " <form action='/ledSetIntensidade'>";
+  response += " <form action='/ledIntensidadeSet'>";
   response += "LED Intensidade:<input type='text' name='nr' size='3' value='50'>";
   response += "<input type='submit' value='ok'></form>\n";
 
   // LED Cor (/ledSetRGB?nr=100)
-  response += " <form action='/ledSetRGB'>";
-  response += "R:<input type='text' name='R' size='3' value='127'>";
-  response += "G:<input type='text' name='G' size='3' value='128'>";
-  response += "B:<input type='text' name='B' size='3' value='129'>";
+  response += " <form action='/ledRGBSet'>";
+  response += "Red:<input type='text' name='R' size='3' value='127'>";
+  response += "Green:<input type='text' name='G' size='3' value='128'>";
+  response += "Blue:<input type='text' name='B' size='3' value='129'>";
   response += "<input type='submit' value='ok'></form>\n";
 
   response += "<a href='/'>Inicio</a><br>\n";
@@ -108,43 +110,66 @@ String MHWiFiServer::defaultHTML()
   return response;
 }
 
+// ---------------------------- //
+// Faz o tratamento dos <forms> //
+// ---------------------------- //
+
+// trata o form /desenhoSet
+void MHWiFiServer::desenhoSet(String *pQuery)
+{
+  // "/desenhoSet?nr=" 15
+  String a = pQuery->substring(15, pQuery->length());
+  Serial.printf("(%s)\n", a.c_str());
+}
+
+// trata o form /frequenciaSet
+void MHWiFiServer::frequenciaSet(String *pQuery)
+{
+  // "/frequenciaSet?hertz=" 21
+  String a = pQuery->substring(21, pQuery->length());
+  Serial.printf("(%s)\n", a.c_str());
+}
+
+// trata o form /ledSetIntensidade
+void MHWiFiServer::ledIntensidadeSet(String *pQuery)
+{
+  // "/ledIntensidadeSet?nr=" 22
+  String a = pQuery->substring(22, pQuery->length());
+  Serial.printf("(%s)\n", a.c_str());
+}
+
+// trata o form /ledRGBSet
+void MHWiFiServer::ledRGBSet(String *pQuery)
+{
+  // "/ledRGBSet?R=127&G=128&B=129"
+  String R = pQuery->substring(pQuery->indexOf("R="), pQuery->indexOf("&G"));
+  String G = pQuery->substring(pQuery->indexOf("G="), pQuery->indexOf("&B"));
+  String B = pQuery->substring(pQuery->indexOf("B="), pQuery->length());
+  Serial.printf("(%s,%s,%s)\n", R.c_str(), G.c_str(), B.c_str());
+}
+
+// ---------------------------- //
+// Faz o tratamento dos <forms> //
+// ---------------------------- //
+
 void MHWiFiServer::printMemoria(const char *pMsg)
 {
   // https://github.com/esp8266/esp8266-wiki/wiki/Memory-Map
 
   // Verifica se a memoria RAM diminui.
   memRAM = ESP.getFreeHeap();  // system_get_free_heap_size();
+
+  // armazena sempre a minima de RAM.
+  if (memRAM_min > memRAM)
+    memRAM_min = memRAM;
+
   if (pMsg)
     Serial.printf(
-        "\nMem.: %d-%d=%d %s\n", memRAM_anterior, memRAM, (memRAM_anterior - memRAM), pMsg);
+        "\nMin.:(%d) %d-%d=%d %s\n", memRAM_min, memRAM_ant, memRAM, (memRAM_ant - memRAM), pMsg);
   else
-    Serial.printf("\nMem.: %d-%d=%d\n", memRAM_anterior, memRAM, (memRAM_anterior - memRAM));
+    Serial.printf("\nMin.:(%d) %d-%d=%d\n", memRAM_min, memRAM_ant, memRAM, (memRAM_ant - memRAM));
 
   // system_print_meminfo();
   // system_show_malloc();
-  memRAM_anterior = memRAM;
-}
-
-// trata o form /desenhoSet
-void MHWiFiServer::desenhoSet(String pQuery)
-{
-  int pos = pQuery.indexOf("/desenhoSet?nr=") + 15;
-  pQuery = pQuery.substring(pos, pQuery.length());
-  Serial.printf("(%s)\n", pQuery);
-}
-
-// trata o form /frequenciaSet
-void MHWiFiServer::frequenciaSet(String pQuery)
-{
-  int pos = pQuery.indexOf("/frequenciaSet?hertz=") + 21;
-  pQuery = pQuery.substring(pos, pQuery.length());
-  Serial.printf("(%s)\n", pQuery);
-}
-
-// trata o forma /ledSetIntensidade
-void MHWiFiServer::ledSetIntensidade(String pQuery)
-{
-  int pos = pQuery.indexOf("/ledSetIntensidade?nr=") + 22;
-  pQuery = pQuery.substring(pos, pQuery.length());
-  Serial.printf("(%s)\n", pQuery);
+  memRAM_ant = memRAM;
 }

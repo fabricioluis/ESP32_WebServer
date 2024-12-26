@@ -8,14 +8,15 @@
 
 class MHWiFiServer {
  private:
-  uint32_t memRAM_anterior = ESP.getFreeHeap();  // system_get_free_heap_size();
-  uint32_t memRAM;
+  uint32_t memRAM_ant = ESP.getFreeHeap();  // system_get_free_heap_size();
+  uint32_t memRAM, memRAM_min;
   String defaultHTML();
 
   // forms HTML
-  void desenhoSet(String pQuery);
-  void frequenciaSet(String pQuery);
-  void ledSetIntensidade(String pQuery);
+  void desenhoSet(String *pQuery);
+  void frequenciaSet(String *pQuery);
+  void ledIntensidadeSet(String *pQuery);
+  void ledRGBSet(String *pQuery);
 
  public:
   MHWiFiServer();

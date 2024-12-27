@@ -4,30 +4,49 @@ WiFiServer server(80);
 
 MHWiFiServer::MHWiFiServer()
 {
+#ifdef MOSTRA_MEMORIA
   memRAM = memRAM_min = ESP.getFreeHeap();
+#endif
 }
 
 void MHWiFiServer::conectaWifi()
 {
-  // WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(NET_SSID, NET_PASSWORD);
+  delay(500);
+  Serial.print("Conectando ");
 
+  int wifi_ct = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
     Serial.print(".");
+    delay(500);
+
+    wifi_ct++;
+    if (wifi_ct == 40) {
+      wifi_ct = 0;
+      Serial.println(" ");
+    }
   }
 
-  Serial.printf("\nWiFi conectado\n");
-  Serial.printf("IP: %s\n", WiFi.localIP().toString());
+  strcpy(_localIP, WiFi.localIP().toString().c_str());
+
+  _wiFiUDP.begin(UDP_PORT);
 
   server.begin();
 
-  Serial.printf("Server HTTP Ok.\n");
+  Serial.printf("\nConectado - IP: %s:%d / (UDP:%d)\n", _localIP, WEB_PORT, UDP_PORT);
+
   delay(500);
 }
 
 void MHWiFiServer::handle()
 {
+  if (listenUDP()) {
+#ifdef MOSTRA_MEMORIA
+    printMemoria();
+#endif
+  }
+
   WiFiClient client = server.available();
 
   if (client) {
@@ -53,7 +72,13 @@ void MHWiFiServer::handle()
         queryString = queryString.substring(pos_barra, posHTTP);
 
         // Faz o tratamento de acordo com o formulario escolhido.
-        if (queryString.indexOf("frequenciaSet") > 0) {
+        if (queryString.indexOf("motor_off") > 0) {
+          motor_off();
+        }
+        else if (queryString.indexOf("motor_on") > 0) {
+          motor_on();
+        }
+        else if (queryString.indexOf("frequenciaSet") > 0) {
           frequenciaSet(&queryString);
         }
         else if (queryString.indexOf("desenhoSet") > 0) {
@@ -74,7 +99,9 @@ void MHWiFiServer::handle()
     client.println(defaultHTML().c_str());
     client.stop();
 
+#ifdef MOSTRA_MEMORIA
     printMemoria();
+#endif
   }  // if (client) {
 }
 
@@ -82,6 +109,10 @@ String MHWiFiServer::defaultHTML()
 {
   String response = "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>";
   response += "<center><h3> ESP32 - Wifi - WebServer</ h3></center><br>\n ";
+
+  // Motor - Funcionalidades
+  response += " <a href='/motor_off'>Desliga</a> ";
+  response += " <a href='/motor_on'>Liga</a>";
 
   // Frequencia (/frequenciaSet?hertz=1000)
   response += " <form action='/frequenciaSet' accept-charset='utf-8'>";
@@ -148,10 +179,76 @@ void MHWiFiServer::ledRGBSet(String *pQuery)
   Serial.printf("(%s,%s,%s)\n", R.c_str(), G.c_str(), B.c_str());
 }
 
+void MHWiFiServer::motor_off()
+{
+  Serial.printf("Motor Desligado.\n");
+}
+
+void MHWiFiServer::motor_on()
+{
+  Serial.printf("Motor Ligado.\n");
+}
+
 // ---------------------------- //
 // Faz o tratamento dos <forms> //
 // ---------------------------- //
 
+/*
+ * UDP
+ * listenUDP()
+ * Faz o tratamento do protocolo UDP para o NodeMCU via porta (UDP_PORT).
+ * Devolve para quem pediu o IP local(_localIP) do NodeMCU.
+ * Retorna true se houve tratamento de pacotes UDP, caso contrario false.
+ */
+bool MHWiFiServer::listenUDP()
+{
+  char _incomingPacket[256] = "";
+  uint8_t *_replyPacket = new uint8_t[41];
+  bool retorno = false;
+
+  int packetSize = _wiFiUDP.parsePacket();
+
+  if (packetSize) {
+    // receive incoming UDP packets
+    Serial.printf("Recebe %d bytes do IP:%s na porta %d\n",
+                  packetSize,
+                  _wiFiUDP.remoteIP().toString().c_str(),
+                  _wiFiUDP.remotePort());
+
+    int len = _wiFiUDP.read(_incomingPacket, 255);
+
+    if (len > 0)
+      _incomingPacket[len] = 0;
+
+    Serial.printf("Conteudo UDP: %s\n", _incomingPacket);
+
+    // send back a reply, to the IP address and port we got the packet from
+    _wiFiUDP.beginPacket(_wiFiUDP.remoteIP(), _wiFiUDP.remotePort());
+    strcpy((char *)_replyPacket, _localIP);
+
+    // Se a string de envio comecar com "MH", entao sera adicionado a serial da Mesa.
+    if (strcmp(_incomingPacket, "MH") == 0) {
+      strcat((char *)_replyPacket, " - ");
+      strcat((char *)_replyPacket, MH_ID);
+    }
+
+    int tam_replayPackey = strlen((char *)_replyPacket);
+    _replyPacket[tam_replayPackey] = '\0';
+    _wiFiUDP.write(_replyPacket, tam_replayPackey);
+    _wiFiUDP.endPacket();
+
+    retorno = true;
+  }
+
+  free(_replyPacket);
+
+  return retorno;
+}
+
+#ifdef MOSTRA_MEMORIA
+/*
+ * Mostra a memoria do MicroControlador e também informa o valor minimo.
+ */
 void MHWiFiServer::printMemoria(const char *pMsg)
 {
   // https://github.com/esp8266/esp8266-wiki/wiki/Memory-Map
@@ -173,3 +270,4 @@ void MHWiFiServer::printMemoria(const char *pMsg)
   // system_show_malloc();
   memRAM_ant = memRAM;
 }
+#endif

@@ -9,7 +9,7 @@ MHWiFiServer::MHWiFiServer()
 #endif
 }
 
-void MHWiFiServer::conectaWifi()
+void MHWiFiServer::conectaWiFi()
 {
   WiFi.mode(WIFI_STA);
   WiFi.begin(NET_SSID, NET_PASSWORD);
@@ -96,7 +96,8 @@ void MHWiFiServer::handle()
     }
 
     // Imprime pagina defaultHTML.
-    client.println(defaultHTML().c_str());
+    defaultHTML();
+    client.println(response.c_str());
     client.stop();
 
 #ifdef MOSTRA_MEMORIA
@@ -105,9 +106,12 @@ void MHWiFiServer::handle()
   }  // if (client) {
 }
 
-String MHWiFiServer::defaultHTML()
+void MHWiFiServer::defaultHTML()
 {
-  String response = "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>";
+  response = "HTTP/1.1 200 OK\n";
+  response += "Content-Type: text/html\n\n";
+
+  response += "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>";
   response += "<center><h3> ESP32 - Wifi - WebServer</ h3></center><br>\n ";
 
   // Motor - Funcionalidades
@@ -137,8 +141,7 @@ String MHWiFiServer::defaultHTML()
   response += "<input type='submit' value='ok'></form>\n";
 
   response += "<a href='/'>Inicio</a><br>\n";
-  response += "</html>";
-  return response;
+  response += "</html>\n";
 }
 
 // ---------------------------- //

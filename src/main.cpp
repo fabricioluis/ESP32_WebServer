@@ -9,7 +9,7 @@ void setup()
   delay(500);
 
   mhwfs = new MHWiFiServer();
-  mhwfs->conectaWifi();
+  mhwfs->conectaWiFi();
 }
 
 void loop()

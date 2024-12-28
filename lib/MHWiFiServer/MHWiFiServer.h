@@ -15,19 +15,15 @@
 
 class MHWiFiServer {
  private:
-#ifdef MOSTRA_MEMORIA
-  uint32_t memRAM_ant = ESP.getFreeHeap();  // system_get_free_heap_size();
-  uint32_t memRAM, memRAM_min;
-#endif
-
   char _localIP[20] = "";
 
   // UDP
   WiFiUDP _wiFiUDP;
 
-  String defaultHTML();
+  String response = "";
 
   // forms HTML
+  void defaultHTML();
   void desenhoSet(String *pQuery);
   void frequenciaSet(String *pQuery);
   void ledIntensidadeSet(String *pQuery);
@@ -38,11 +34,13 @@ class MHWiFiServer {
  public:
   MHWiFiServer();
 
-  void conectaWifi();
+  void conectaWiFi();
   void handle();
   bool listenUDP();
 
 #ifdef MOSTRA_MEMORIA
+  uint32_t memRAM_ant = ESP.getFreeHeap();  // system_get_free_heap_size();
+  uint32_t memRAM, memRAM_min;
   void printMemoria(const char *pMsg = NULL);
 #endif
 };
